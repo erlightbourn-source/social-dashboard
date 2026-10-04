@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Social Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0e14; --panel: #141925; --panel2: #1b2231; --border: #232b3d;
+    --text: #e6ebf5; --muted: #8a94a8; --accent: #6ea8fe;
+    --up: #4ade80; --down: #f87171; --flat: #8a94a8;
+    --yt: #ff4e45; --ig: #e1306c; --tt: #25f4ee;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 20px 28px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: rgba(11,14,20,.85); backdrop-filter: blur(8px); z-index: 5; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 650; }
+  header .meta { color: var(--muted); font-size: 12px; }
+  .spacer { flex: 1; }
+  button { background: var(--accent); color: #08101f; border: 0; border-radius: 8px;
+    padding: 9px 16px; font-weight: 600; cursor: pointer; font-size: 13px; }
+  button:disabled { opacity: .55; cursor: default; }
+  .wrap { padding: 24px 28px 60px; max-width: 1280px; margin: 0 auto; }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+    gap: 14px; margin-bottom: 26px; }
+  .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .stat .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .stat .value { font-size: 26px; font-weight: 700; margin-top: 4px; }
+  .stat .sub { font-size: 12px; margin-top: 2px; }
+  .platrow { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 26px; }
+  .chip { background: var(--panel2); border: 1px solid var(--border); border-radius: 20px;
+    padding: 6px 14px; font-size: 12px; display: flex; gap: 8px; align-items: center; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
+  h2.section { font-size: 13px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .05em; margin: 0 0 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px,1fr)); gap: 16px; }
+  .brand { margin-bottom: 30px; }
+  .brand-title { font-size: 16px; font-weight: 650; margin: 0 0 12px;
+    display: flex; align-items: baseline; gap: 10px; }
+  .brand-title .bt-sub { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .brand-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px,1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+  .card.err { border-color: #5b2330; }
+  .card .top { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+    text-transform: uppercase; letter-spacing: .03em; color: #08101f; }
+  .badge.youtube { background: var(--yt); color: #fff; }
+  .badge.instagram { background: var(--ig); color: #fff; }
+  .badge.tiktok { background: var(--tt); }
+  .card .name { font-weight: 650; font-size: 15px; }
+  .card .proj { color: var(--muted); font-size: 11px; }
+  .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; margin: 6px 0 14px; }
+  .metric .m-label { color: var(--muted); font-size: 11px; }
+  .metric .m-val { font-size: 20px; font-weight: 700; }
+  .metric .m-delta { font-size: 12px; font-weight: 600; }
+  .up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--flat); }
+  .windows { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+  .windows b { color: var(--text); font-weight: 650; }
+  .spark { height: 70px; }
+  .errmsg { color: #f8a0a0; font-size: 12px; background: #2a151b; border-radius: 8px;
+    padding: 8px 10px; margin-top: 4px; }
+  .empty { text-align: center; color: var(--muted); padding: 60px 20px; }
+  .empty code { background: var(--panel2); padding: 2px 6px; border-radius: 5px; }
+  a { color: var(--accent); }
+  .manual-row { display: flex; align-items: center; justify-content: space-between;
+    margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .src-tag { font-size: 11px; color: var(--muted); }
+  .mini { background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+    padding: 5px 12px; font-size: 12px; border-radius: 7px; }
+  .pendingcard { border-style: dashed; }
+  .pending { color: var(--muted); font-size: 13px; padding: 10px 0 2px; }
+  .editform { margin-top: 12px; background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px; }
+  .ef-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+  .ef-grid label { display: flex; flex-direction: column; font-size: 11px; color: var(--muted); gap: 3px; }
+  .ef-grid input { background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 7px 8px; font-size: 14px; }
+  .save { margin-top: 10px; width: 100%; }
+  .trend { background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 20px 14px; margin-bottom: 26px; }
+  .trend-title { font-size: 13px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .05em; margin-bottom: 10px; }
+  .trend canvas { height: 200px; width: 100%; }
+  .stats2 { display: flex; gap: 16px; font-size: 11px; color: var(--muted); margin-bottom: 10px; flex-wrap: wrap; }
+  .stats2 b { color: var(--text); font-weight: 650; }
+  .gate { position: fixed; inset: 0; background: rgba(8,10,16,.96); z-index: 50;
+    display: flex; align-items: center; justify-content: center; }
+  .gate .box { background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 32px; width: 320px; text-align: center; }
+  .gate h2 { margin: 0 0 6px; font-size: 18px; }
+  .gate p { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
+  .gate input { width: 100%; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 10px; font-size: 15px; margin-bottom: 10px; }
+  .gate .err { color: var(--down); font-size: 12px; min-height: 16px; margin-bottom: 8px; }
+  .content { margin-top: 12px; font-size: 12px; }
+  .content summary { color: var(--muted); cursor: pointer; user-select: none; }
+  .citem { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0;
+    border-top: 1px solid var(--border); color: var(--text); text-decoration: none; }
+  .citem:first-of-type { margin-top: 6px; }
+  .citem .ct { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .citem .cm { color: var(--muted); white-space: nowrap; }
+  .citem:hover .ct { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>📊 Social Dashboard</h1>
+  <span class="meta" id="lastrun">—</span>
+  <div class="spacer"></div>
+  <button id="refresh">↻ Refresh now</button>
+</header>
+<div class="gate" id="gate" style="display:none">
+  <div class="box">
+    <h2>🔒 Private dashboard</h2>
+    <p>Enter the passcode to view.</p>
+    <input type="password" id="gatepass" placeholder="Passcode" autocomplete="off">
+    <div class="err" id="gateerr"></div>
+    <button id="gatebtn" style="width:100%">Unlock</button>
+  </div>
+</div>
+<div class="wrap">
+  <div class="summary" id="summary"></div>
+  <div class="trend" id="trendwrap" style="display:none">
+    <div class="trend-title">Total followers over time</div>
+    <canvas id="trendchart"></canvas>
+  </div>
+  <div class="platrow" id="platforms"></div>
+  <h2 class="section">Accounts</h2>
+  <div id="grid"></div>
+</div>
+
+<script>
+const PLAT_COLORS = { youtube: "#ff4e45", instagram: "#e1306c", tiktok: "#25f4ee" };
+const fmt = n => n === null || n === undefined ? "—" : n.toLocaleString();
+const charts = {};
+
+function deltaHTML(v, opts={}) {
+  if (v === null || v === undefined) return '<span class="flat">—</span>';
+  const cls = v > 0 ? "up" : v < 0 ? "down" : "flat";
+  const sign = v > 0 ? "▲ " : v < 0 ? "▼ " : "± ";
+  const pre = opts.prefix || "";
+  return `<span class="${cls}">${sign}${pre}${fmt(Math.abs(v))}</span>`;
+}
+
+function timeAgo(iso) {
+  if (!iso) return "never";
+  const d = new Date(iso), s = (Date.now() - d) / 1000;
+  if (s < 90) return "just now";
+  if (s < 3600) return Math.round(s/60) + "m ago";
+  if (s < 86400) return Math.round(s/3600) + "h ago";
+  return Math.round(s/86400) + "d ago";
+}
+
+function render(data) {
+  if (window.READONLY) {
+    const rb = document.getElementById("refresh");
+    if (rb) rb.style.display = "none";
+  }
+  document.getElementById("lastrun").textContent =
+    "Last updated " + timeAgo(data.last_run) +
+    (data.last_run ? " · " + new Date(data.last_run).toLocaleString() : "") +
+    (window.READONLY ? " · published view" : "");
+
+  const t = data.totals || {};
+  document.getElementById("summary").innerHTML = [
+    statCard("Total followers", fmt(t.followers), deltaHTML(t.new_follows_since_last) + " new since last run"),
+    statCard("New follows", deltaHTML(t.new_follows_since_last), "across all accounts"),
+    statCard("Total likes", fmt(t.likes), "all platforms combined"),
+    statCard("Total videos", fmt(t.videos), "posts tracked"),
+  ].join("");
+
+  const plats = data.platforms || {};
+  document.getElementById("platforms").innerHTML = Object.keys(plats).sort().map(p => {
+    const d = plats[p];
+    return `<div class="chip"><span class="dot" style="background:${PLAT_COLORS[p]||'#888'}"></span>
+      <b style="text-transform:capitalize">${p}</b> · ${fmt(d.followers)} followers ·
+      ${d.accounts} acct${d.accounts!==1?'s':''} · ${deltaHTML(d.new_follows_since_last)}</div>`;
+  }).join("") || "";
+
+  const grid = document.getElementById("grid");
+  if (!data.accounts.length) {
+    grid.innerHTML = `<div class="empty">No data yet. Add credentials, then run
+      <code>python3 collector.py</code> or hit <b>Refresh now</b>.<br><br>
+      Edit <code>accounts.json</code> to set your real handles/ids.</div>`;
+    return;
+  }
+
+  // Group accounts by brand (project), each brand's platforms shown together.
+  const maxF = accts => Math.max(...accts.map(a => (a.current || {}).followers ?? -1));
+  const groups = {};
+  for (const a of data.accounts) {
+    const k = a.project || a.display_name || a.key;
+    (groups[k] = groups[k] || { name: a.display_name, accts: [] }).accts.push(a);
+  }
+  const ordered = Object.values(groups).sort((x, y) => maxF(y.accts) - maxF(x.accts));
+
+  grid.innerHTML = ordered.map(g => {
+    const cards = g.accts
+      .sort((a, b) => ((b.current || {}).followers ?? -1) - ((a.current || {}).followers ?? -1))
+      .map(cardHTML).join("");
+    const plats = [...new Set(g.accts.map(a => a.platform))].length;
+    return `<div class="brand"><h3 class="brand-title">${g.name}
+      <span class="bt-sub">${g.accts.length} account${g.accts.length !== 1 ? "s" : ""}` +
+      `${plats > 1 ? " · " + plats + " platforms" : ""}</span></h3>
+      <div class="brand-grid">${cards}</div></div>`;
+  }).join("");
+
+  data.accounts.forEach(a => drawSpark(a));
+  drawTrend(data.totals_history || []);
+}
+
+let trendChart;
+function drawTrend(hist) {
+  const wrap = document.getElementById("trendwrap");
+  if (!hist || hist.length < 2) { wrap.style.display = "none"; return; }
+  wrap.style.display = "block";
+  const el = document.getElementById("trendchart");
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart(el, {
+    type: "line",
+    data: {
+      labels: hist.map(h => new Date(h.date).toLocaleDateString()),
+      datasets: [{
+        label: "Total followers",
+        data: hist.map(h => h.followers),
+        borderColor: "#6ea8fe", backgroundColor: "#6ea8fe22",
+        fill: true, tension: .3, pointRadius: 0, borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: "index", intersect: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#8a94a8", maxTicksLimit: 8 } },
+        y: { grid: { color: "#232b3d" }, ticks: { color: "#8a94a8" } },
+      },
+    },
+  });
+}
+
+function growthPct(curr, deltaFollowers) {
+  if (!curr || deltaFollowers === null || deltaFollowers === undefined) return null;
+  const prev = curr.followers - deltaFollowers;
+  if (!prev || prev <= 0) return null;
+  return (deltaFollowers / prev) * 100;
+}
+
+function statsLine(a, c) {
+  const parts = [];
+  const g = growthPct(c, a.delta.since_last.followers);
+  if (g !== null) {
+    const cls = g > 0 ? "up" : g < 0 ? "down" : "flat";
+    parts.push(`Growth: <b class="${cls}">${g > 0 ? "+" : ""}${g.toFixed(Math.abs(g) >= 10 ? 0 : 1)}%</b>`);
+  }
+  if (c.likes != null && c.videos) {
+    parts.push(`Avg likes/post: <b>${fmt(Math.round(c.likes / c.videos))}</b>`);
+  }
+  if (!parts.length) return "";
+  return `<div class="stats2">${parts.map(p => `<span>${p}</span>`).join("")}</div>`;
+}
+
+function statCard(label, value, sub) {
+  return `<div class="stat"><div class="label">${label}</div>
+    <div class="value">${value}</div><div class="sub">${sub||""}</div></div>`;
+}
+
+function topHTML(a) {
+  return `<div class="top">
+    <span class="badge ${a.platform}">${a.platform}</span>
+    <div><div class="name">${a.display_name}</div><div class="proj">${a.project||""}</div></div></div>`;
+}
+
+function cardHTML(a) {
+  const c = a.current || {};
+  const dl = a.delta.since_last;
+  const isManual = a.manual;
+  const isErr = a.status === "error";
+  const isPending = a.status === "pending" || (!a.current && !isErr);
+
+  // Live (API) account that errored — show the error.
+  if (isErr && !isManual) {
+    return `<div class="card err">${topHTML(a)}
+      <div class="errmsg">⚠ ${a.error || "no data collected yet"}</div></div>`;
+  }
+
+  const metricsBlock = isPending
+    ? `<div class="pending">${window.READONLY ? "Not tracked yet." : "No numbers yet — click below to enter the current counts."}</div>`
+    : `<div class="metrics">
+        ${metric("Followers", c.followers, dl.followers)}
+        ${metric("Likes", c.likes, dl.likes)}
+        ${metric("Videos", c.videos, dl.videos)}
+        ${metric("Views", c.views, dl.views)}
+      </div>
+      <div class="windows">
+        <span>7d: <b>${deltaTxt(a.delta.d7.followers)}</b></span>
+        <span>30d: <b>${deltaTxt(a.delta.d30.followers)}</b></span>
+      </div>
+      ${statsLine(a, c)}`;
+
+  const spark = isPending ? "" : `<canvas class="spark" id="spark-${a.key}"></canvas>`;
+
+  const manualUI = (isManual && !window.READONLY) ? `
+    <div class="manual-row">
+      <span class="src-tag">✎ manual${a.handle ? " · " + a.handle : ""}</span>
+      <button class="mini" onclick="toggleEdit('${a.key}')">${isPending ? "Enter numbers" : "Update"}</button>
+    </div>
+    ${editFormHTML(a, isPending)}` : "";
+
+  return `<div class="card${isPending ? " pendingcard" : ""}">${topHTML(a)}
+    ${metricsBlock}
+    ${spark}
+    ${contentHTML(a)}
+    ${manualUI}</div>`;
+}
+
+function editFormHTML(a, open) {
+  const c = a.current || {};
+  const v = x => (x === null || x === undefined) ? "" : x;
+  return `<div class="editform" id="edit-${a.key}" style="display:${open ? "block" : "none"}">
+    <div class="ef-grid">
+      <label>Followers<input type="number" id="f-${a.key}" value="${v(c.followers)}"></label>
+      <label>Likes<input type="number" id="l-${a.key}" value="${v(c.likes)}"></label>
+      <label>Videos<input type="number" id="v-${a.key}" value="${v(c.videos)}"></label>
+      <label>Views<input type="number" id="w-${a.key}" value="${v(c.views)}"></label>
+    </div>
+    <button class="save" onclick="saveManual('${a.key}')">Save</button>
+  </div>`;
+}
+
+function toggleEdit(key) {
+  const el = document.getElementById("edit-" + key);
+  if (el) el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
+async function saveManual(key) {
+  const g = id => document.getElementById(id + "-" + key).value;
+  const body = { account_key: key, followers: g("f"), likes: g("l"), videos: g("v"), views: g("w") };
+  try {
+    const r = await fetch("/api/manual", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    if (j.error) { alert("Save failed: " + j.error); return; }
+    if (j.data) render(j.data);
+  } catch (e) { alert("Save failed: " + e); }
+}
+
+function deltaTxt(v) {
+  if (v === null || v === undefined) return "—";
+  return (v>0?"+":"") + v.toLocaleString();
+}
+
+function contentHTML(a) {
+  const items = (a.top_content || []).slice(0, 5);
+  if (!items.length) return "";
+  const rows = items.map(it => {
+    const m = it.views != null ? fmt(it.views) + " views"
+            : it.likes != null ? fmt(it.likes) + " likes" : "";
+    const link = it.url ? `href="${it.url}" target="_blank" rel="noopener"` : "";
+    return `<a class="citem" ${link}><span class="ct">${(it.title || "post")
+      .replace(/</g, "&lt;")}</span><span class="cm">${m}</span></a>`;
+  }).join("");
+  return `<details class="content"><summary>Top recent content</summary>${rows}</details>`;
+}
+
+function metric(label, val, delta) {
+  return `<div class="metric"><div class="m-label">${label}</div>
+    <div class="m-val">${fmt(val)}</div>
+    <div class="m-delta">${deltaHTML(delta)}</div></div>`;
+}
+
+function drawSpark(a) {
+  const el = document.getElementById("spark-" + a.key);
+  if (!el || !a.history || a.history.length < 2) return;
+  if (charts[a.key]) charts[a.key].destroy();
+  const color = PLAT_COLORS[a.platform] || "#6ea8fe";
+  charts[a.key] = new Chart(el, {
+    type: "line",
+    data: {
+      labels: a.history.map(h => new Date(h.ts).toLocaleDateString()),
+      datasets: [{
+        data: a.history.map(h => h.followers),
+        borderColor: color, backgroundColor: color + "22",
+        fill: true, tension: .35, pointRadius: 0, borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: "index", intersect: false } },
+      scales: { x: { display: false }, y: { display: false } },
+    },
+  });
+}
+
+let GATE_KEY = null; // passcode held in memory after a successful unlock
+
+function b64d(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+
+async function decryptData(enc, passcode) {
+  const salt = b64d(enc.salt), iv = b64d(enc.iv), ct = b64d(enc.ct);
+  const km = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(passcode), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+    km, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+function showGate(enc) {
+  const gate = document.getElementById("gate");
+  gate.style.display = "flex";
+  const pass = document.getElementById("gatepass");
+  const err = document.getElementById("gateerr");
+  const unlock = async () => {
+    err.textContent = "";
+    try {
+      const data = await decryptData(enc, pass.value);
+      GATE_KEY = pass.value;
+      gate.style.display = "none";
+      render(data);
+    } catch (e) { err.textContent = "Incorrect passcode"; pass.select(); }
+  };
+  document.getElementById("gatebtn").onclick = unlock;
+  pass.onkeydown = e => { if (e.key === "Enter") unlock(); };
+  pass.focus();
+}
+
+async function load() {
+  // 1) Local server (full, editable).
+  try {
+    const r = await fetch("/api/data");
+    if (!r.ok) throw new Error("no backend");
+    render(await r.json());
+    return;
+  } catch (e) { /* no backend → published static site */ }
+
+  // 2) Published static site: encrypted snapshot behind a passcode.
+  window.READONLY = true;
+  const enc = await (await fetch("./data.enc", { cache: "no-store" })).json();
+  if (GATE_KEY) {
+    try { render(await decryptData(enc, GATE_KEY)); return; }
+    catch (e) { GATE_KEY = null; }
+  }
+  showGate(enc);
+}
+
+document.getElementById("refresh").addEventListener("click", async (e) => {
+  const b = e.target; b.disabled = true; b.textContent = "↻ Refreshing…";
+  try {
+    const r = await fetch("/api/refresh", { method: "POST" });
+    const j = await r.json();
+    if (j.data) render(j.data); else await load();
+  } catch (err) { alert("Refresh failed: " + err); }
+  finally { b.disabled = false; b.textContent = "↻ Refresh now"; }
+});
+
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>
